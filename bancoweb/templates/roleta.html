@@ -1,43 +1,64 @@
 {% extends "base.html" %}
 {% block conteudo %}
-<div class="card p-4 text-center">
-    <h2>🎰 Roleta Sofisticada</h2>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-4" style="background: #1e1e1e; color: #f1f1f1;">
+                <div class="card-body text-center p-4">
+                    <h2 class="fw-bold mb-3">
+                        <i class="bi bi-disc me-2"></i> Roleta Sofisticada
+                    </h2>
 
-    {% if resultado %}
-        <div id="resultado" class="alert alert-info mt-3">{{ resultado }}</div>
-    {% else %}
-        <div id="resultado" class="alert alert-info mt-3"></div>
-    {% endif %}
+                    {% if resultado %}
+                        <div id="resultado" class="alert alert-info mt-3">{{ resultado }}</div>
+                    {% else %}
+                        <div id="resultado" class="alert alert-info mt-3 d-none"></div>
+                    {% endif %}
 
-    <canvas id="roletaCanvas" width="150" height="150"></canvas>
-    <div class="seta">▼</div>
+                    <!-- Roleta -->
+                    <div class="position-relative d-inline-block my-4">
+                        <canvas id="roletaCanvas" width="250" height="250"></canvas>
+                        <div class="seta">▼</div>
+                    </div>
 
-    <form id="form-roleta" method="POST">
-        <div class="mb-3">
-            <label>Valor da aposta (R$)</label>
-            <input type="number" step="0.01" name="aposta" class="form-control" required>
+                    <!-- Formulário -->
+                    <form id="form-roleta" method="POST" class="text-start">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Valor da aposta (R$)</label>
+                            <input type="number" step="0.01" name="aposta"
+                                   class="form-control bg-dark text-light border-0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Escolha um número (1-12)</label>
+                            <input type="number" name="numero_escolhido" min="1" max="12"
+                                   class="form-control bg-dark text-light border-0" required>
+                        </div>
+                        <button type="submit" class="btn w-100 fw-semibold"
+                                style="background: linear-gradient(135deg, #28a745, #218838); color: #fff; border: none;">
+                            🎲 Jogar
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label>Escolha um número (1-12)</label>
-            <input type="number" name="numero_escolhido" min="1" max="12" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-success w-100">🎲 Jogar</button>
-    </form>
+    </div>
 </div>
 
 <style>
 canvas {
-    border: 2px solid #333;
+    border: 3px solid #555;
     border-radius: 50%;
-    margin-top: 10px;
+    background: radial-gradient(circle at center, #f8f9fa, #e9ecef);
 }
 .seta {
-    font-size: 20px;
-    color: red;
-    position: relative;
-    top: -130px;
+    font-size: 26px;
+    color: #dc3545;
+    position: absolute;
+    top: -10px;
     left: 50%;
     transform: translateX(-50%);
+    font-weight: bold;
+    text-shadow: 0 0 4px #000;
 }
 </style>
 
@@ -59,15 +80,19 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.beginPath();
             ctx.moveTo(centro,centro);
             ctx.arc(centro,centro,raio,i*slice+angulo,(i+1)*slice+angulo);
-            ctx.fillStyle = i%2===0?'#007bff':'#ffcc00'; // azul e amarelo
+            ctx.fillStyle = i%2===0?'#343a40':'#ffc107';
             ctx.fill();
+
             ctx.save();
             ctx.translate(centro,centro);
-            ctx.rotate(i*slice + slice/2 + angulo); // centra o número na fatia
-            ctx.fillStyle = "#000";
-            ctx.font = "12px Arial";
+            ctx.rotate(i*slice + slice/2 + angulo);
+
+            ctx.fillStyle = i%2===0 ? "#f8f9fa" : "#212529";
+            ctx.font = "bold 16px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(num, raio-15, 5);
+            ctx.textBaseline = "middle";
+            ctx.fillText(num, raio-25, 0);
+
             ctx.restore();
         });
     }
@@ -78,39 +103,51 @@ document.addEventListener("DOMContentLoaded", function() {
         e.preventDefault();
         const numeroEscolhido = parseInt(form.numero_escolhido.value);
 
-        // sorteia o número final
         const numeroSorteado = Math.floor(Math.random()*12)+1;
         const slice = 2*Math.PI/numeros.length;
         const voltas = 5;
 
-        // ajusta ângulo final para que o número sorteado fique bem centralizado sob a seta
-        const anguloFinal = (voltas*2*Math.PI) - ((numeroSorteado-1) * slice) - slice/2 + Math.PI/2;
-        let angulo = 0;
+        // Alinha corretamente com a seta no topo
+        const offsetSeta = -Math.PI/2;
+        const anguloFinal = (voltas*2*Math.PI) 
+                          - ((numeroSorteado-1) * slice) 
+                          - slice/2 
+                          + offsetSeta;
+
         let start = null;
 
         function easeOutQuad(t) {
-            return t*(2-t); // easing para desacelerar
+            return t*(2-t);
         }
 
         function animarRoleta(timestamp){
             if(!start) start = timestamp;
-            const progresso = (timestamp - start)/8000; // duração total 3s
+            const progresso = (timestamp - start)/4000;
             const eased = easeOutQuad(Math.min(progresso,1));
             const angAtual = anguloFinal * eased;
             desenharRoleta(angAtual);
             if(progresso < 1){
                 requestAnimationFrame(animarRoleta);
             } else {
-                desenharRoleta(anguloFinal); // roleta parada
+                desenharRoleta(anguloFinal);
+
+                // Destaque visual do número vencedor
+                ctx.save();
+                ctx.translate(centro,centro);
+                ctx.rotate((numeroSorteado-1)*slice + slice/2 + anguloFinal);
+                ctx.fillStyle = "red";
+                ctx.font = "bold 20px Arial";
+                ctx.fillText(numeroSorteado, raio-25, 0);
+                ctx.restore();
+
                 setTimeout(()=>{
-                    desenharRoleta(0); // volta para posição inicial
                     const input = document.createElement('input');
                     input.type = 'hidden';
                     input.name = 'numero_sorteado';
                     input.value = numeroSorteado;
                     form.appendChild(input);
                     form.submit();
-                }, 5000);
+                }, 2000);
             }
         }
 
